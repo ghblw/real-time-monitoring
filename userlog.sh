@@ -24,7 +24,7 @@ for i in $rank; do
     echo -n ","
 done
 echo -n "] "
-#具有root权限用户 groups中有sudo   id X | grep sudo    echo $? 0:有 其他：没有
+#具有root权限用户
 echo -n "["
 for i in $users; do
     id $i 2>/dev/null | grep sudo 1>/dev/null  
