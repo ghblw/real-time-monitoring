@@ -8,4 +8,5 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 int socket_create(char *port1);
+int socket_connect(int port, char *host);
 #endif

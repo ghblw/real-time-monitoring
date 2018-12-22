@@ -27,5 +27,3 @@ for i in $list; do
     fi
     cnt=$[$cnt+1]
 done
-
-
