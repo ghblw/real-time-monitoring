@@ -59,6 +59,7 @@ void *send_file(void *argv) {
             }
             mutex_id = id % 10 + 1;
             pthread_mutex_lock(&mutex[mutex_id]);
+            printf("存在文件，开始传文件\n");
             if (fd == NULL) {
                 //printf("不存在日志文件\n");
                 id *= 4;
@@ -69,7 +70,6 @@ void *send_file(void *argv) {
             id *= 2; 
             send(sock_fd1, &id, 4, 0);
             recv(sock_fd1, &id, 4, 0);
-            //printf("存在文件，开始传文件\n");
             //开始传文件	
             int sock_data1;
             sleep(5);
@@ -83,6 +83,7 @@ void *send_file(void *argv) {
                 send(sock_data1, buffer, strlen(buffer), 0);
                 memset(buffer, 0, sizeof(buffer));
             }
+            printf("传文件结束\n");
             fclose(fd);
             close(sock_data1);
             system(dir);
@@ -137,13 +138,15 @@ void *run_script(void *argv) {
                int len;
                pthread_mutex_lock(&mutex[id]);
                FILE *fd = fopen(dir, "a+");
+               printf("写日志\n");
                while ((len = fread(buffer, 1, MAXN, p)) != 0) {
-                   printf("%s\n",buffer);
+                   //printf("%s\n",buffer);
                    fwrite(buffer, sizeof(char), strlen(buffer), fd);
                    memset(buffer, 0, sizeof(buffer));
                }
                fclose(p);
                fclose(fd);
+               printf("写完日志\n");
                pthread_mutex_unlock(&mutex[id]);
         sleep(sleep_time);
     }
@@ -154,18 +157,26 @@ void *warning(void *argv) {
         FILE *p = popen("bash ../script/alter.sh", "r");
         char buffer[MAXN + 5];
         int sock_wn = socket_connect(PORT_WARN, "192.168.1.76");
-        printf("%s\n", buffer);
         fread(buffer, 1, MAXN, p);
         send(sock_wn, buffer, strlen(buffer), 0);
-        sleep(2);
+        sleep(5);
+    }
+}
+
+void *heart(void *argv) {
+    while (1) {
+        int sock_id = socket_connect(PORT_HRT, "192.168.1.76");
+        close(sock_id);//心跳连接
+        sleep(30);
     }
 }
 
 int main(int argc, char *argv[]) {
     sock_fd = socket_create(PORT_LS);//长链接监听套接字
     sock_data = socket_create(PORT_DAT);//短链接监听套接字
-    pthread_create(&t[0], NULL,send_file, (void *)&para[0]);//线程0:等待Master连接，传文件
-    pthread_create(&t[7], NULL,warning, (void *)&para[7]);//线程7:发送报警信息
+    pthread_create(&t[0], NULL, send_file, (void *)&para[0]);//线程0:等待Master连接，传文件
+    pthread_create(&t[7], NULL, warning, (void *)&para[7]);//线程7:发送报警信息
+    pthread_create(&t[8], NULL, heart, (void *)&para[8]);//线程8:心跳机制
     for (int i = 1; i <= 6; i++) {
         pthread_mutex_init(&mutex[i], NULL);   
     }
@@ -173,9 +184,11 @@ int main(int argc, char *argv[]) {
         para[i].num = i;//存0~5区分六个脚本
         pthread_create(&t[i], NULL, run_script, (void *)&para[i]);
     }
-    while (1) {
-        int sock_id = socket_connect(PORT_HRT, "192.168.1.76");
-        close(sock_id);//心跳连接
-        sleep(5);
-    }
+    pthread_join(t[1], NULL);
+    pthread_join(t[2], NULL);
+    pthread_join(t[3], NULL);
+    pthread_join(t[4], NULL);
+    pthread_join(t[5], NULL);
+    pthread_join(t[6], NULL);
+    pthread_join(t[7], NULL);
 }

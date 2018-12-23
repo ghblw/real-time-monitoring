@@ -104,7 +104,7 @@ void *warning(void *argv) {
             perror("warning Accept");
         }
         recv(sockfd1, buffer, MAXN, 0);
-        printf("[警告信息]%s\n", buffer);
+        strlen(buffer) && printf("[警告信息]%s\n", buffer);
         FILE *fd = fopen("warning.log", "a+");
         fwrite(buffer, sizeof(char), strlen(buffer), fd);
         fclose(fd);
@@ -259,7 +259,7 @@ Node connect_or_delete(LinkedList *head, int port, char *IP, int num) {
                 perror("Connect数据连接");
             }//短链接
             else {
-                printf("开始接收文件\n");
+                printf("开始接收%s的文件\n", IP);
                 int len2;
                 char buffer[MAXN + 5];    
                 char dir[100] = "./";
@@ -291,6 +291,7 @@ Node connect_or_delete(LinkedList *head, int port, char *IP, int num) {
                     fwrite(buffer, sizeof(char), strlen(buffer), fd);
                     memset(buffer, 0, sizeof(buffer));
                 }
+                printf("接收文件结束\n");
                 fclose(fd);
                 close(sock_data);//关闭短链接
             }
@@ -319,7 +320,8 @@ void *func(void *argv) {
         ret = connect_or_delete((Node **)linkedlist[para->num], PORT_CLT, IP, para->num);
         linkedlist[para->num] = ret.next;
         if (ret.data == 0) {
-            p = linkedlist[para->num];
+            p = p->next;
+            //p = linkedlist[para->num];
         } else {
             if (p->next == NULL) p = linkedlist[para->num];
             else p = p->next;
