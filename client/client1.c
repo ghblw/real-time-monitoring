@@ -144,7 +144,7 @@ void *run_script(void *argv) {
                    fwrite(buffer, sizeof(char), strlen(buffer), fd);
                    memset(buffer, 0, sizeof(buffer));
                }
-               fclose(p);
+               pclose(p);
                fclose(fd);
                printf("写完日志\n");
                pthread_mutex_unlock(&mutex[id]);
@@ -159,6 +159,8 @@ void *warning(void *argv) {
         int sock_wn = socket_connect(PORT_WARN, "192.168.1.76");
         fread(buffer, 1, MAXN, p);
         send(sock_wn, buffer, strlen(buffer), 0);
+        close(sock_wn);
+        pclose(p);
         sleep(5);
     }
 }
