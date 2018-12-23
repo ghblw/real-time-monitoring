@@ -26,4 +26,5 @@
 #include <time.h>
 #include <stdarg.h>
 #include <pthread.h>
+#include <sys/stat.h>
 #endif

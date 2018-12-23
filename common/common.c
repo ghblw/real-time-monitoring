@@ -20,6 +20,11 @@ int socket_create(int port) {
         perror("Socket");
         return -1;
     }
+    //设置套接字选项避免地址使用错误  
+    int on = 1;  
+    if((setsockopt(sock_server, SOL_SOCKET,SO_REUSEADDR, &on, sizeof(on))) < 0) {
+        perror("setsockopt failed");
+    } 
     if (bind(sock_server, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0) {
         perror("Bind");
         return -1;

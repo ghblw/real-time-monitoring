@@ -8,10 +8,11 @@
 #include <pthread.h>
 #include "/home/yuxiaowei/real-time-monitoring/common/head.h"
 #include "../common/common.c"
-#define INS 1
+#define INS 5
 #define PORT1 1080
 #define PORT_DATA 8900
 #define PORT_CLT 8732
+#define PORT_WARN 9876
 int vis[1000] = {0};
 pthread_mutex_t mutex[10];
 void *func(void *);
@@ -92,9 +93,29 @@ int find_min(int N, int *arr) {
     return ans;
 }
 
+void *warning(void *argv) {
+    int sockfd = socket_create(PORT_WARN);
+    struct sockaddr_in clt_addr;
+    socklen_t len = sizeof(clt_addr);
+    while (1) {
+        char buffer[MAXN + 5];
+        int sockfd1;
+        if ((sockfd1 = accept(sockfd, (struct sockaddr *) &clt_addr, &len)) < 0) {
+            perror("warning Accept");
+        }
+        recv(sockfd1, buffer, MAXN, 0);
+        printf("[警告信息]%s\n", buffer);
+        FILE *fd = fopen("warning.log", "a+");
+        fwrite(buffer, sizeof(char), strlen(buffer), fd);
+        fclose(fd);
+        close(sockfd1);
+    }
+    close(sockfd);
+}
+
 int main() {
     pthread_t t[INS + 1];//存储线程ID
-    struct mypara para[INS + 1];//每个线程有一个独立的数据区，不会发生冲突
+    struct mypara para[INS + 5];//每个线程有一个独立的数据区，不会发生冲突
     
     //初始化
     for (int i = 0; i < 5; i++) {
@@ -127,7 +148,7 @@ int main() {
         }
         printf("Current pthread id = %ld \n", t[i]);
     }
-    
+    pthread_create(&t[5], NULL, warning, (void *)&para[5]);
     int sockfd;
     struct sockaddr_in client_addr;
     sockfd = socket_create(PORT1);//心跳监听套接字
@@ -217,19 +238,23 @@ Node connect_or_delete(LinkedList *head, int port, char *IP, int num) {
         ret.next = linkedlist[num];
         int len;
         for (int id = 100; id <= 105; id++) {
-            printf("准备询问%d日志\n", id);
-            send(sockfd, &id, 4, 0);
+            if (send(sockfd, &id, 4, 0) <= 0) {
+                perror("发送长链接send\n");
+                break;
+            }
             int id2;
-            if (recv(sockfd, &id2, 4, 0) <= 0) continue;
-            printf("收到响应码%d\n",id2);
-            if (id2 != 2 * id) {
+            if (recv(sockfd, &id2, 4, 0) <= 0) {
+                perror("长链接收响应码recv");
+                break;
+            }
+            if (id2 == 4 * id) {
                 printf("不存在\n");
                 continue;
             }
             //说明Client端文件夹没有日志文件，继续询问下一种日志文件 
             int sock_data;
             send(sockfd, &id, 4, 0);
-            sleep(2);
+            //sleep(5);
             if ((sock_data = socket_connect(PORT_DATA, IP)) < 0) {
                 perror("Connect数据连接");
             }//短链接
@@ -237,10 +262,36 @@ Node connect_or_delete(LinkedList *head, int port, char *IP, int num) {
                 printf("开始接收文件\n");
                 int len2;
                 char buffer[MAXN + 5];    
-	            while ((len2 = recv(sock_data, buffer, MAXN, 0)) > 0) {
-                    printf("%s\n", buffer);//需要写入IP/xxxlog
-                    memset(buffer, 0 ,sizeof(buffer));
+                char dir[100] = "./";
+                strcat(dir, IP);
+                mkdir(dir, 0775);
+                switch (id2) {
+                    case 200: {
+                        strcat(dir, "/cpu.log");
+                    } break;
+                    case 202: {
+                        strcat(dir, "/sys.log");
+                    } break;
+                    case 204: {
+                        strcat(dir, "/mem.log");
+                    } break;
+                    case 206: {
+                        strcat(dir, "/user.log");
+                    } break;
+                    case 208: {
+                        strcat(dir, "/disk.log");
+                    } break;
+                    case 210: {
+                        strcat(dir, "/bad.log");
+                    } break;
                 }
+	            FILE *fd = fopen(dir, "a+");
+                while ((len2 = recv(sock_data, buffer, MAXN, 0)) > 0) {
+                    printf("%s\n",buffer);
+                    fwrite(buffer, sizeof(char), strlen(buffer), fd);
+                    memset(buffer, 0, sizeof(buffer));
+                }
+                fclose(fd);
                 close(sock_data);//关闭短链接
             }
         }
