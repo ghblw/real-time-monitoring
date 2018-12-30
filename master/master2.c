@@ -117,13 +117,13 @@ int main() {
     int pid;
     pid = fork();
     if (pid > 0) {
-        FILE *fp = fopen("/etc/master_yxw.pid", "w");
-        fprintf(fp,"%d", pid);
-        fclose(fp);
-        exit(0);
+        //FILE *fp = fopen("/etc/master_yxw.pid", "w");
+        //fprintf(fp,"%d", pid);
+        //fclose(fp);
+        exit(EXIT_SUCCESS);
     }
-    //freopen("/dev/null", "w", stdout);
-    // freopen("/dev/null", "w", stderr);
+    freopen("/dev/null", "w", stdout);
+    freopen("/dev/null", "w", stderr);
     pthread_t t[INS + 1];//存储线程ID
     struct mypara para[INS + 5];//每个线程有一个独立的数据区，不会发生冲突
     

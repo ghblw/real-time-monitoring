@@ -1,0 +1,12 @@
+[Unit]
+Description=master_yxw
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/pi_yxw.sh
+ExecStop=/usr/bin/pi_yxw_stop.sh
+
+[Install]
+WantedBy=multi-user.target
